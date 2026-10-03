@@ -151,9 +151,16 @@ class BootstrapInstaller(private val ctx: Context) {
                 val name = entry.name
                 when {
                     name == "SYMLINKS.txt" -> {
-                        zin.bufferedReader().forEachLine { line ->
-                            val parts = line.split('←')
-                            if (parts.size == 2) symlinks += parts[0] to parts[1]
+                        // NOT bufferedReader(): forEachLine closes the reader it
+                        // creates, which closes the underlying ZipInputStream,
+                        // and the next closeEntry() throws "Stream closed".
+                        // readBytes() stops at the entry boundary instead.
+                        val text = String(zin.readBytes(), Charsets.UTF_8)
+                        text.lineSequence().forEach { line ->
+                            val parts = line.split('\u2190')
+                            if (parts.size == 2 && parts[0].isNotBlank()) {
+                                symlinks += parts[0].trim() to parts[1].trim()
+                            }
                         }
                     }
                     name.endsWith("/") -> Unit
