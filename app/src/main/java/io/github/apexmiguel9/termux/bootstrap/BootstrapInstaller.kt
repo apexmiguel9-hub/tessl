@@ -79,19 +79,24 @@ class BootstrapInstaller(private val ctx: Context) {
         var failed = 0
         val failures = mutableListOf<String>()
 
-        for ((linkName, rawTarget) in symlinks) {
-            // SYMLINKS.txt lines are "linkName<-target" (U+2190), both relative
-            // to $PREFIX. The link name is relative to the TARGET's directory,
-            // not to $PREFIX. Verified against a live Termux install:
+        for ((targetName, linkPath) in symlinks) {
+            // generate-bootstraps.sh writes SYMLINKS.txt as
+            //   "<readlink output> <- U+2190 <path relative to $PREFIX>"
+            // because it iterates `find . -type l` and echoes
+            // "$(readlink "$link")<-${link}". So parts[1] is the LINK and
+            // parts[0] is the TARGET:
             //
-            //   "libreadline.so.8<-./lib/libreadline.so"
+            //   "libreadline.so.8 <- ./lib/libreadline.so"
+            //     link   = $PREFIX/lib/libreadline.so
+            //     target = libreadline.so.8  (relative to the link's dir)
             //
-            // yields $PREFIX/lib/libreadline.so.8 -> $PREFIX/lib/libreadline.so,
-            // and indeed "lib/libreadline.so -> libreadline.so.8" is what a real
-            // Termux has. Treating linkName as relative to $PREFIX put 1211 of
-            // 1213 links in the wrong directory.
-            val target = File(prefixDir, rawTarget)
-            val link = File(target.parentFile, linkName)
+            // which is exactly what a live Termux has:
+            //   lib/libreadline.so -> libreadline.so.8
+            // I had these the other way round, so every link pointed at a
+            // path that was never created and bash died with
+            // "library libreadline.so.8 not found".
+            val link = File(prefixDir, linkPath)
+            val target = File(link.parentFile, targetName)
             if (!link.path.startsWith(prefixDir.path)) {
                 failed++
                 failures += "escapes prefix: ${link.name}"
