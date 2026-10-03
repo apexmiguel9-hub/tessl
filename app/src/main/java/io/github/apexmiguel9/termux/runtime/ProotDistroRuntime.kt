@@ -107,6 +107,8 @@ class ProotDistroRuntime(
         envp = environment(home),
         initialRows = rows,
         initialCols = cols,
+        // Inside proot "/" is the guest rootfs, so cwd is the guest home.
+        initialCwd = "/root",
         onOutput = onOutput,
         onExit = onExit,
     )

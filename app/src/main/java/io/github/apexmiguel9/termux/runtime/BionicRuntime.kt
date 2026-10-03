@@ -47,6 +47,7 @@ class BionicRuntime(private val paths: AppPaths) : Runtime {
         envp = environment(home),
         initialRows = rows,
         initialCols = cols,
+        initialCwd = home.absolutePath,
         onOutput = onOutput,
         onExit = onExit,
     )

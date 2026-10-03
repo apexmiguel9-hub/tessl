@@ -44,7 +44,8 @@ static int child_login_tty(int slave_fd) {
 
 int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
                     const char *const envp[],
-                    const struct winsize *ws) {
+                    const struct winsize *ws,
+                    const char *cwd) {
     int master = -1, slave = -1;
     int exec_status[2] = { 0, 0 };
     pid_t pid;
@@ -94,6 +95,9 @@ int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
         prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 #endif
         if (child_login_tty(slave) == -1) _exit(127);
+        /* The app's cwd is not necessarily readable, which made 'ls .' fail
+         * with EACCES in an otherwise working shell. */
+        if (cwd && chdir(cwd) == -1) _exit(127);
         if (envp) execve(argv[0], (char *const *) argv, (char *const *) envp);
         else execv(argv[0], (char *const *) argv);
         /* Only reached on exec failure. 127 is the conventional "not found". */

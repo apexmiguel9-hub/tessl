@@ -40,7 +40,7 @@ static void run_cmd(const char *name, const char *cmd, char *out, size_t cap) {
     tessl_pty p;
     const char *argv[] = {SH, "-c", cmd, NULL};
     int code = -1;
-    if (tessl_pty_spawn(&p, argv, NULL, NULL) != 0) {
+    if (tessl_pty_spawn(&p, argv, NULL, NULL, NULL) != 0) {
         snprintf(out, cap, "spawn failed: %s", strerror(errno));
         ok(name, 0, out);
         return;
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
         struct winsize ws;
         memset(&ws, 0, sizeof(ws));
         ws.ws_row = 37; ws.ws_col = 111;
-        if (tessl_pty_spawn(&p, argv2, NULL, &ws) != 0) {
+        if (tessl_pty_spawn(&p, argv2, NULL, &ws, NULL) != 0) {
             ok("winsize at spawn", 0, strerror(errno));
         } else {
             int code;
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
         struct winsize ws;
         memset(&ws, 0, sizeof(ws));
         ws.ws_row = 24; ws.ws_col = 80;
-        if (tessl_pty_spawn(&p, argv3, NULL, &ws) != 0) {
+        if (tessl_pty_spawn(&p, argv3, NULL, &ws, NULL) != 0) {
             ok("resize propagates", 0, strerror(errno));
         } else {
             char first[1024] = {0}, second[1024] = {0};
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
     {
         tessl_pty p;
         const char *argv4[] = {SH, "-c", "read -r line; printf 'got=%s' \"$line\"", NULL};
-        if (tessl_pty_spawn(&p, argv4, NULL, NULL) != 0) {
+        if (tessl_pty_spawn(&p, argv4, NULL, NULL, NULL) != 0) {
             ok("interactive write/read", 0, strerror(errno));
         } else {
 
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
         tessl_pty p;
         const char *argv5[] = {SH, "-c", "exit 42", NULL};
         int code = -1;
-        if (tessl_pty_spawn(&p, argv5, NULL, NULL) != 0) {
+        if (tessl_pty_spawn(&p, argv5, NULL, NULL, NULL) != 0) {
             ok("exit code", 0, strerror(errno));
         } else {
             drain(&p, out, sizeof(out), 200);
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
         const char *env[] = {"TESSL_TEST_VAR=envpass-7734", "PATH=/system/bin", NULL};
         const char *argv6[] = {SH, "-c", "printf '%s' \"$TESSL_TEST_VAR\"", NULL};
         int code;
-        if (tessl_pty_spawn(&p, argv6, env, NULL) != 0) {
+        if (tessl_pty_spawn(&p, argv6, env, NULL, NULL) != 0) {
             ok("envp applied", 0, strerror(errno));
         } else {
             drain(&p, out, sizeof(out), 250);
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
         tessl_pty p;
         const char *argv7[] = {"/nonexistent/definitely-not-here", NULL};
         int code = -1;
-        if (tessl_pty_spawn(&p, argv7, NULL, NULL) != 0) {
+        if (tessl_pty_spawn(&p, argv7, NULL, NULL, NULL) != 0) {
             ok("exec failure -> 127", 0, strerror(errno));
         } else {
             drain(&p, out, sizeof(out), 250);
@@ -179,6 +179,23 @@ int main(int argc, char **argv) {
             tessl_pty_close(&p);
             char d[64]; snprintf(d, sizeof(d), "got %d", code);
             ok("exec failure -> 127", code == 127, d);
+        }
+    }
+
+    /* 10. the child's cwd is the one we asked for */
+    {
+        tessl_pty p;
+        const char *argv8[] = {SH, "-c", "pwd", NULL};
+        int code;
+        char here[1024] = {0};
+        if (getcwd(here, sizeof(here)) == NULL) here[0] = 0;
+        if (tessl_pty_spawn(&p, argv8, NULL, NULL, "/tmp") != 0) {
+            ok("child cwd", 0, strerror(errno));
+        } else {
+            drain(&p, out, sizeof(out), 250);
+            tessl_pty_wait(&p, &code);
+            tessl_pty_close(&p);
+            ok("child cwd", strstr(out, "/tmp") != NULL, out);
         }
     }
 

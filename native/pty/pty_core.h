@@ -43,7 +43,9 @@ typedef struct {
  * Returns 0 on success (tessl_pty filled in), -1 with errno set on failure. */
 int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
                     const char *const envp[],
-                    const struct winsize *ws);
+                    const struct winsize *ws,
+                    /** chdir() target in the child; NULL to keep the parent's. */
+                    const char *cwd);
 
 /* Signal a window-size change. Returns 0 or -1/errno. */
 int tessl_pty_resize(tessl_pty *p, int rows, int cols);

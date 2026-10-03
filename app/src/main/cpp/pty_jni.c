@@ -65,7 +65,8 @@ JNIEXPORT jlong JNICALL
 Java_io_github_apexmiguel9_termux_pty_PtyNative_nativeSpawn(JNIEnv *env, jclass cls,
                                                              jobjectArray argv,
                                                              jobjectArray envp,
-                                                             jint rows, jint cols) {
+                                                             jint rows, jint cols,
+                                                             jstring cwd) {
     (void) cls;
     jsize n = (*env)->GetArrayLength(env, argv);
     char **c_argv = build_argv(env, argv, n);
@@ -86,8 +87,17 @@ Java_io_github_apexmiguel9_termux_pty_PtyNative_nativeSpawn(JNIEnv *env, jclass 
     tessl_pty *p = calloc(1, sizeof(tessl_pty));
     if (!p) { free_argv(c_argv); free_argv(c_envp); return 0; }
 
-    if (tessl_pty_spawn(p, (const char *const *) c_argv,
-                        (const char *const *) c_envp, &ws) != 0) {
+    const char *c_cwd = NULL;
+    jstring cwd_chars = NULL;
+    if (cwd) {
+        cwd_chars = (jstring) (*env)->NewLocalRef(env, cwd);
+        c_cwd = (*env)->GetStringUTFChars(env, cwd_chars, NULL);
+    }
+
+    int spawn_rc = tessl_pty_spawn(p, (const char *const *) c_argv,
+                                   (const char *const *) c_envp, &ws, c_cwd);
+    if (c_cwd) (*env)->ReleaseStringUTFChars(env, cwd_chars, c_cwd);
+    if (spawn_rc != 0) {
         free(p);
         free_argv(c_argv);
         free_argv(c_envp);

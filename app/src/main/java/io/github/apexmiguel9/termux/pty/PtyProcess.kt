@@ -18,6 +18,7 @@ class PtyProcess(
     private val envp: List<String>?,
     initialRows: Int,
     initialCols: Int,
+    initialCwd: String?,
     private val onOutput: (ByteArray) -> Unit,
     private val onExit: (Int) -> Unit,
 ) : Closeable {
@@ -27,6 +28,7 @@ class PtyProcess(
         envp?.toTypedArray(),
         initialRows,
         initialCols,
+        initialCwd,
     )
 
     private val closed = AtomicBoolean(false)

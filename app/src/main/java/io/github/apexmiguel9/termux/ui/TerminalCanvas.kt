@@ -114,6 +114,11 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScreen(
         val row: TerminalRow = screen.getLine(y) ?: continue
         val used = row.spaceUsed
         var x = 0
+        // Pen position in px. Advanced by the MEASURED width of each run, not
+        // by charCount * cellWidth: the measured advance of a run is rounded
+        // independently, so accumulating cell counts drifts and long lines end
+        // up visibly misaligned.
+        var penX = 0f
 
         while (x < cols) {
             val style = row.getStyle(x)
@@ -143,25 +148,28 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScreen(
                 fg = Color.White
             }
 
-            val px = start * cw.toFloat()
+            val px = penX
             val py = y * ch.toFloat()
+
+            val drawStyle = baseStyle.copy(
+                color = fg,
+                fontWeight = if (TermStyle.isBold(style)) FontWeight.Bold else FontWeight.Normal,
+                textDecoration = if (TermStyle.isUnderline(style)) TextDecoration.Underline else null,
+            )
+            val measured = measurer.measure(text, drawStyle)
+            val runW = measured.size.width.toFloat()
 
             if (bg != Color.Unspecified) {
                 drawRect(
                     color = bg,
                     topLeft = Offset(px, py),
-                    size = Size(text.length * cw.toFloat(), ch.toFloat()),
+                    size = Size(runW, ch.toFloat()),
                 )
             }
-
             if (text.isNotBlank()) {
-                val drawStyle = baseStyle.copy(
-                    color = fg,
-                    fontWeight = if (TermStyle.isBold(style)) FontWeight.Bold else FontWeight.Normal,
-                    textDecoration = if (TermStyle.isUnderline(style)) TextDecoration.Underline else null,
-                )
-                drawText(measurer.measure(text, drawStyle), topLeft = Offset(px, py))
+                drawText(measured, topLeft = Offset(px, py))
             }
+            penX += runW
         }
     }
 

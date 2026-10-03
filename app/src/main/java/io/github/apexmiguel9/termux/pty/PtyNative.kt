@@ -20,6 +20,7 @@ internal object PtyNative {
         envp: Array<String>?,
         rows: Int,
         cols: Int,
+        cwd: String?,
     ): Long
 
     /** @return available bytes, an empty array on EOF, null on timeout. */
