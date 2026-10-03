@@ -1,0 +1,10 @@
+*.iml
+.gradle/
+local.properties
+build/
+.cxx/
+.externalNativeBuild/
+.idea/
+*.apk
+*.aab
+native/pty/test_pty
