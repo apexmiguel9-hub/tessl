@@ -61,6 +61,9 @@ interface Runtime {
                 add("SHELL=${prefix}/bin/bash")
                 if (ld.isNotEmpty()) add("LD_LIBRARY_PATH=$ld")
                 add("TERMUX_APP_PACKAGE=io.github.apexmiguel9.termux")
+                // termux-tools' `pkg` switches on this and leaves its apt cache
+                // directory unset without it.
+                add("TERMUX_APP_PACKAGE_MANAGER=apt")
             }
         }
     }

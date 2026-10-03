@@ -50,6 +50,15 @@ object Relocator {
     const val TERMUX_PREFIX = "/data/data/com.termux/files/usr"
     const val TERMUX_FILES = "/data/data/com.termux/files"
 
+    /**
+     * The app data dir itself. Needed because plenty of scripts reference paths
+     * outside $PREFIX -- termux-tools' `pkg` hardcodes
+     * /data/data/com.termux/cache/apt/archives and .../cache/apt/pkgcache.bin,
+     * which match neither TERMUX_PREFIX nor TERMUX_FILES and so survived
+     * relocation, leaving apt's cache pointing into a directory we cannot write.
+     */
+    const val TERMUX_DATA_DIR = "/data/data/com.termux"
+
     /** Longest target prefix the .rodata strings can absorb. */
     val MAX_PREFIX_LEN = TERMUX_PREFIX.length
 
@@ -94,6 +103,7 @@ object Relocator {
                     if (fits) {
                         buf = replaceAll(buf, sourcePrefix, targetPrefix)
                         buf = replaceAll(buf, TERMUX_FILES, targetPrefix.removeSuffix("/usr"))
+                        buf = replaceAll(buf, TERMUX_DATA_DIR, targetPrefix.substringBefore("/files"))
                     }
 
                     if (!buf.contentEquals(bytes)) {
@@ -111,6 +121,7 @@ object Relocator {
                         file.writeText(
                             text.replace(sourcePrefix, targetPrefix)
                                 .replace(TERMUX_FILES, targetPrefix.removeSuffix("/usr"))
+                                .replace(TERMUX_DATA_DIR, targetPrefix.substringBefore("/files"))
                         )
                         textPatched++
                     }
