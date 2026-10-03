@@ -96,7 +96,7 @@ fun BootstrapGate(
                 onClick = {
                     running = true
                     error = null
-                    val installer = BootstrapInstaller(paths.context())
+                    val installer = BootstrapInstaller(paths.context)
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         when (val r = installer.install(archiveUrl) { d, _ -> files = d }) {
                             is BootstrapInstaller.Result.AlreadyInstalled -> done = true

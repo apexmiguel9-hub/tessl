@@ -54,7 +54,7 @@ class BootstrapInstaller(private val ctx: Context) {
             val (files, symlinks) = unzip(zip, paths.prefixDir, onProgress)
 
             // The zip cannot carry symlinks; without these there is no bash.
-            val made = makeSymlinks(prefixDir, symlinks)
+            val made = makeSymlinks(paths.prefixDir, symlinks)
 
             val report = Relocator.relocate(
                 root = paths.prefixDir,
@@ -130,9 +130,9 @@ class BootstrapInstaller(private val ctx: Context) {
         zip: File,
         prefixDir: File,
         onProgress: (Int, Int) -> Unit,
-    ): Pair<Int, List<String>> {
+    ): Pair<Int, List<Pair<String, String>>> {
         var count = 0
-        val symlinks = mutableListOf<String>()
+        val symlinks = mutableListOf<Pair<String, String>>()
 
         ZipInputStream(BufferedInputStream(zip.inputStream())).use { zin ->
             var entry = zin.nextEntry
