@@ -13,6 +13,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 
 /**
@@ -29,6 +30,7 @@ fun KeyCapture(
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
+    val context = LocalContext.current
     val focus = remember { FocusRequester() }
 
     LaunchedEffect(view) {
@@ -60,6 +62,13 @@ fun KeyCapture(
             }
         }
         view.requestFocus()
+        focus.requestFocus()
+        // Compose focus alone does not raise the IME; ask for it explicitly or
+        // tapping the terminal does nothing visible.
+        android.view.inputmethod.InputMethodManager::class.java
+        (context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+            as? android.view.inputmethod.InputMethodManager)
+            ?.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
     }
 
     androidx.compose.foundation.layout.Box(

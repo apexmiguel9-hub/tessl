@@ -73,32 +73,53 @@ class BootstrapInstaller(private val ctx: Context) {
             .also { tmp.deleteRecursively() }
     }
 
-    /**
-     * SYMLINKS.txt lines are `link<-target` (an actual U+2190 LEFTWARDS ARROW,
-     * matching Termux's TermuxInstaller.java). `link` is relative to $PREFIX;
-     * `target` is absolute and still points at Termux's prefix, so it is
-     * rewritten here rather than relying on the text pass, which only looks at
-     * files it can open.
-     */
     private fun makeSymlinks(prefixDir: File, symlinks: List<Pair<String, String>>): Int {
         var made = 0
-        for ((linkRel, rawTarget) in symlinks) {
-            val link = File(prefixDir, linkRel)
-            val target = rawTarget
-                .replace(Relocator.TERMUX_PREFIX, prefixDir.absolutePath)
-                .replace(Relocator.TERMUX_FILES, prefixDir.parentFile?.absolutePath ?: "")
+        var skipped = 0
+        var failed = 0
+        val failures = mutableListOf<String>()
+
+        for ((linkName, rawTarget) in symlinks) {
+            // SYMLINKS.txt lines are "linkName<-target" (U+2190), both relative
+            // to $PREFIX. The link name is relative to the TARGET's directory,
+            // not to $PREFIX. Verified against a live Termux install:
+            //
+            //   "libreadline.so.8<-./lib/libreadline.so"
+            //
+            // yields $PREFIX/lib/libreadline.so.8 -> $PREFIX/lib/libreadline.so,
+            // and indeed "lib/libreadline.so -> libreadline.so.8" is what a real
+            // Termux has. Treating linkName as relative to $PREFIX put 1211 of
+            // 1213 links in the wrong directory.
+            val target = File(prefixDir, rawTarget)
+            val link = File(target.parentFile, linkName)
+            if (!link.path.startsWith(prefixDir.path)) {
+                failed++
+                failures += "escapes prefix: ${link.name}"
+                continue
+            }
+            if (link.exists() || java.nio.file.Files.isSymbolicLink(link.toPath())) {
+                // A real file (e.g. libz.so.1.3.2) or a link we already made.
+                skipped++
+                continue
+            }
             try {
                 link.parentFile?.mkdirs()
-                if (link.exists() || java.nio.file.Files.isSymbolicLink(link.toPath())) {
-                    link.delete()
-                }
-                java.nio.file.Files.createSymbolicLink(link.toPath(), java.nio.file.Paths.get(target))
+                java.nio.file.Files.createSymbolicLink(
+                    link.toPath(),
+                    target.toPath(),
+                )
                 made++
-            } catch (_: Exception) {
-                // A dangling or duplicate link is not fatal; the file it should
-                // point at is already in place if it matters.
+            } catch (e: Exception) {
+                failed++
+                if (failures.size < 8) failures += "${link.name}: ${e.message}"
             }
         }
+
+        android.util.Log.i(
+            "tessl/bootstrap",
+            "symlinks made=$made skipped=$skipped failed=$failed" +
+                if (failures.isEmpty()) "" else " e.g. $failures",
+        )
         return made
     }
 

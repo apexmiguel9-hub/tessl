@@ -4,8 +4,13 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -54,7 +59,24 @@ fun TerminalCanvas(
         IntSize(max(1, m.size.width), max(1, m.size.height))
     }
 
-    Canvas(modifier.fillMaxSize().background(background)) {
+    // Size the grid from the actual view, then resize the emulator to match.
+    // It was created at a hardcoded 80x24, which on a 2400x1080 landscape
+    // window drew into a 720x432 corner and left the rest black.
+    var box by remember { mutableStateOf(IntSize.Zero) }
+    LaunchedEffect(box, cell) {
+        if (box.width > 0 && cell.width > 0) {
+            val cols = (box.width / cell.width).coerceIn(20, 400)
+            val rows = (box.height / cell.height).coerceIn(5, 200)
+            session.resize(rows, cols, cell.width, cell.height)
+        }
+    }
+
+    Canvas(
+        modifier
+            .fillMaxSize()
+            .background(background)
+            .onSizeChanged { box = it }
+    ) {
         drawScreen(session, cell.width, cell.height, defaultFg = foreground, cursorColor, baseStyle, measurer)
     }
 }
