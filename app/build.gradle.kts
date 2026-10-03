@@ -13,7 +13,28 @@ android {
         // Android 11 is the floor: user-facing requirement, and it is also
         // where Vulkan 1.3 class drivers start appearing.
         minSdk = 30
-        targetSdk = 36
+        // MUST stay <= 28. AOSP system/sepolicy private/app_neverallows.te:
+        //
+        //   # Block calling execve() on files in an apps home directory.
+        //   # This is a W^X violation. For compatibility, allow for
+        //   # targetApi <= 28.
+        //   neverallow { all_untrusted_apps
+        //     -untrusted_app_25 -untrusted_app_27 -runas_app
+        //   } { app_data_file privapp_data_file }:file execute_no_trans;
+        //
+        // So only targetSdk 25/26-28 apps are given execute_no_trans on their
+        // own data dir; everything >= 29 runs in plain `untrusted_app` and is
+        // denied. Confirmed on an Android 16 device:
+        //
+        //   avc: denied { execute_no_trans } for comm="tessl-session-s"
+        //     path=".../files/usr/bin/bash"
+        //     scontext=u:r:untrusted_app  tcontext=u:oject_r:app_data_file
+        //
+        // There is no workaround from inside the app: no manifest flag, no
+        // permission, no Java API. Every Termux fork sets targetSdk 28 for
+        // this reason. The cost is that the Play Store will not accept the
+        // build, so distribution has to be F-Droid / GitHub.
+        targetSdk = 28
         versionCode = 1
         versionName = "0.1.0"
 
