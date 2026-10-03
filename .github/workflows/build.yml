@@ -24,7 +24,29 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # Not using android-actions/setup-android: on this runner it pulls a
+      # *preview* cmdline-tools that then fails its own licence check, so it
+      # can never bootstrap itself. The runner image already ships an SDK.
+      - name: Set up Android SDK
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          echo "SDK=$SDK"
+          mkdir -p "$SDK/licenses"
+          printf '%s\n' \
+            24333f8a63b6825ea9c5514f83c2829b004d1fee \
+            84831b9409646a918e30573bab4c9c91346d8abd > "$SDK/licenses/android-sdk-license"
+          printf '%s\n' \
+            33b6a2b64607f11b759f320ef9dff4ae5c47d97a > "$SDK/licenses/android-sdk-preview-license"
+          SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SM" ] || { echo "no sdkmanager at $SM"; ls "$SDK/cmdline-tools"; exit 1; }
+          yes | "$SM" --licenses > /dev/null 2>&1 || true
+          "$SM" --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;30.0.14904198" \
+            "cmake;3.22.1"
 
       - name: Cache gradle
         uses: actions/cache@v4
