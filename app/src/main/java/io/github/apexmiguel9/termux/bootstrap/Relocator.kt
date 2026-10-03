@@ -79,9 +79,13 @@ object Relocator {
         var textPatched = 0
         val stale = mutableListOf<String>()
 
+        var seen = 0
+        var elfs = 0
         root.walkTopDown().filter { it.isFile }.forEach { file ->
+            seen++
             when {
                 isElf(file) -> {
+                    elfs++
                     val bytes = file.readBytes()
                     val patched = replaceAll(bytes, "$sourcePrefix/lib", ORIGIN_RUNPATH)
                     var buf = patched
@@ -114,6 +118,19 @@ object Relocator {
             }
         }
 
+        android.util.Log.i(
+            "tessl/relocator",
+            "root=$root seen=$seen elfs=$elfs elfPatched=$elfPatched " +
+                "textPatched=$textPatched stale=${stale.size} full=${
+                    supportsFully(targetPrefix)
+                } srcLen=${sourcePrefix.length} dstLen=${targetPrefix.length}",
+        )
+        if (elfs > 0 && elfPatched == 0) {
+            android.util.Log.e(
+                "tessl/relocator",
+                "found $elfs ELFs but patched none -- source string never matched",
+            )
+        }
         return Report(
             elfPatched = elfPatched,
             textPatched = textPatched,

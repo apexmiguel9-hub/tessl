@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            if (!paths.isPrefixInstalled) {
+            if (!showShell) {
                 BootstrapGate(
                     paths = paths,
                     archiveUrl = BOOTSTRAP_URL,
