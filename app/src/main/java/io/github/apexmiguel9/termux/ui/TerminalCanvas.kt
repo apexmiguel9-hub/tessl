@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -78,6 +79,14 @@ fun TerminalCanvas(
             .onSizeChanged { box = it }
     ) {
         drawScreen(session, cell.width, cell.height, defaultFg = foreground, cursorColor, baseStyle, measurer)
+        // Subtle top fade so rows do not collide with the tab strip.
+        drawRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Black.copy(alpha = 0.35f),
+                0.08f to Color.Transparent,
+            ),
+            size = Size(size.width, cell.height * 1.5f),
+        )
     }
 }
 
@@ -156,13 +165,21 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScreen(
         }
     }
 
-    // Cursor is drawn last so it sits above the cell it occupies.
+    // Cursor drawn last so it sits above its cell: a hollow block reads better
+    // than a solid one on a dark background.
     if (emu.shouldCursorBeVisible() && emu.cursorRow in 0 until rows && emu.cursorCol in 0 until cols) {
+        val cx = emu.cursorCol * cw.toFloat()
+        val cy = emu.cursorRow * ch.toFloat()
         drawRect(
-            color = cursorColor,
-            topLeft = Offset(emu.cursorCol * cw.toFloat(), emu.cursorRow * ch.toFloat()),
+            color = cursorColor.copy(alpha = 0.28f),
+            topLeft = Offset(cx, cy),
             size = Size(cw.toFloat(), ch.toFloat()),
         )
+        val t = (1.4f).coerceAtMost(cw * 0.14f)
+        drawRect(cursorColor, Offset(cx, cy), Size(cw.toFloat(), t))
+        drawRect(cursorColor, Offset(cx, cy + ch - t), Size(cw.toFloat(), t))
+        drawRect(cursorColor, Offset(cx, cy), Size(t, ch.toFloat()))
+        drawRect(cursorColor, Offset(cx + cw - t, cy), Size(t, ch.toFloat()))
     }
 }
 

@@ -50,16 +50,9 @@ class PtyProcess(
         try {
             while (!closed.get()) {
                 // 250ms keeps shutdown latency low without spinning.
-                val chunk = PtyNative.nativeRead(handle, 250)
-                if (chunk == null) {
-                    // nativeRead returns null for BOTH timeout and EOF, so a
-                    // plain `?: continue` turns a finished child into an
-                    // infinite poll loop that never reaches nativeWait and
-                    // never reports the exit.
-                    if (!PtyNative.nativeAlive(handle)) break
-                    continue
-                }
-                if (chunk.isEmpty()) continue
+                // null = poll timeout, empty = EOF (slave closed).
+                val chunk = PtyNative.nativeRead(handle, 250) ?: continue
+                if (chunk.isEmpty()) break
                 onOutput(chunk)
             }
         } catch (t: Throwable) {

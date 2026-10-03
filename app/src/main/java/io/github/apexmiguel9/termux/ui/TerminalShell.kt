@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -48,7 +54,18 @@ fun TerminalShell(
 ) {
     val active = sessions.firstOrNull { it.id == activeId }
 
-    Column(modifier.fillMaxSize().background(Bg)) {
+    Column(
+        modifier
+            .fillMaxSize()
+            .background(
+                // Vertical wash instead of a flat fill.
+                Brush.verticalGradient(
+                    0f to Color(0xFF101017),
+                    0.35f to Bg,
+                    1f to Color(0xFF07070A),
+                )
+            )
+    ) {
         SessionBar(
             sessions = sessions,
             activeId = activeId,
@@ -64,7 +81,12 @@ fun TerminalShell(
                 key(active.id) {
                     TerminalCanvas(
                         session = active,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            // Breathing room and rounded corners so the grid
+                            // does not butt against the bar and the nav bar.
+                            .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 8.dp)
+                            .clip(RoundedCornerShape(10.dp)),
                     )
                     // Transparent, full-size: it exists only to hold focus and
                     // swallow key events for the active session.
@@ -96,13 +118,19 @@ private fun SessionBar(
 ) {
     Surface(color = BarBg) {
         Row(
-            Modifier.fillMaxWidth().height(44.dp),
+            Modifier
+                .fillMaxWidth()
+                // The status bar draws over us with edge-to-edge, which put the
+                // session tabs underneath the clock.
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .height(46.dp)
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             LazyRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
             ) {
                 items(sessions, key = { it.id }) { s ->
                     val selected = s.id == activeId
@@ -135,8 +163,17 @@ private fun SessionBar(
                     }
                 }
             }
-            Button(onClick = onNew, modifier = Modifier.padding(end = 6.dp)) {
-                Text("+", fontSize = 14.sp)
+            // A glyph rather than Icons.Default.Add: material-icons-extended
+            // is a multi-megabyte dependency for one plus sign.
+            Box(
+                Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TabActive)
+                    .clickable { onNew() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("+", fontSize = 20.sp, color = Fg)
             }
         }
     }

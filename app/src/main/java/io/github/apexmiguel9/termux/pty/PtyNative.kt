@@ -22,7 +22,7 @@ internal object PtyNative {
         cols: Int,
     ): Long
 
-    /** @return available bytes, or null on timeout / EOF. */
+    /** @return available bytes, an empty array on EOF, null on timeout. */
     external fun nativeRead(handle: Long, timeoutMs: Int): ByteArray?
 
     external fun nativeWrite(handle: Long, data: ByteArray): Int

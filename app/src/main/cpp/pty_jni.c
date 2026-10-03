@@ -121,11 +121,18 @@ Java_io_github_apexmiguel9_termux_pty_PtyNative_nativeRead(JNIEnv *env, jclass c
     unsigned char stackbuf[4096];
     ssize_t n = tessl_pty_read(p, stackbuf, sizeof(stackbuf));
     if (n < 0) {
-        if (errno == EIO) return NULL; /* child closed the slave: normal EOF */
+        if (errno == EIO) {
+            /* EOF: nobody holds the slave open any more. Return an EMPTY array
+             * rather than null so the caller can tell this apart from a poll
+             * timeout. Liveness cannot be probed with kill(pid, 0) here: an
+             * exited-but-unreaped child is a zombie and still answers signal
+             * 0, so the reader loop spun forever on a dead shell. */
+            return (*env)->NewByteArray(env, 0);
+        }
         (*env)->ThrowNew(env, "java/lang/RuntimeException", strerror(errno));
         return NULL;
     }
-    if (n == 0) return NULL;
+    if (n == 0) return (*env)->NewByteArray(env, 0);
 
     jbyteArray out = (*env)->NewByteArray(env, (jsize) n);
     if (!out) return NULL;
