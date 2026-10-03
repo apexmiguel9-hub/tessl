@@ -47,6 +47,9 @@ android {
             keyPassword = "android"
         }
         // Real key comes from the environment so no secret is in the repo.
+        // Registered unconditionally so the type exists, but only *applied*
+        // to the release build type when the keystore is actually present,
+        // otherwise packageRelease fails instead of emitting an unsigned apk.
         create("release") {
             val f = rootProject.file(
                 System.getenv("TESSL_KEYSTORE") ?: "keystore/release.jks"
@@ -68,7 +71,14 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (rootProject.file(
+                    System.getenv("TESSL_KEYSTORE") ?: "keystore/release.jks"
+                ).exists()
+            ) {
+                signingConfigs.getByName("release")
+            } else {
+                null
+            }
         }
     }
 
