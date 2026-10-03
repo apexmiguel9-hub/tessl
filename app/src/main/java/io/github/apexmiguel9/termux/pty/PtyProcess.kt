@@ -50,18 +50,37 @@ class PtyProcess(
         try {
             while (!closed.get()) {
                 // 250ms keeps shutdown latency low without spinning.
-                val chunk = PtyNative.nativeRead(handle, 250) ?: continue
+                val chunk = PtyNative.nativeRead(handle, 250)
+                if (chunk == null) {
+                    // nativeRead returns null for BOTH timeout and EOF, so a
+                    // plain `?: continue` turns a finished child into an
+                    // infinite poll loop that never reaches nativeWait and
+                    // never reports the exit.
+                    if (!PtyNative.nativeAlive(handle)) break
+                    continue
+                }
                 if (chunk.isEmpty()) continue
                 onOutput(chunk)
             }
+        } catch (t: Throwable) {
+            android.util.Log.e("tessl/pty", "reader loop died", t)
+        }
+        val execErrno = try {
+            PtyNative.nativeExecErrno(handle)
         } catch (_: Throwable) {
-            // Fall through to the exit handling below.
+            0
         }
         val code = try {
             PtyNative.nativeWait(handle)
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            android.util.Log.e("tessl/pty", "wait failed", t)
             -1
         }
+        android.util.Log.i(
+            "tessl/pty",
+            "pid=$pid exit=$code execErrno=$execErrno" +
+                if (execErrno != 0) " (${strerrorOf(execErrno)})" else "",
+        )
         exitCode.set(code)
         closed.set(true)
         onExit(code)
@@ -83,6 +102,11 @@ class PtyProcess(
 
     /** Non-blocking liveness probe for the UI. */
     fun pollExit(): Int? = if (closed.get()) exitCode.get() else null
+
+    private fun strerrorOf(e: Int): String = runCatching {
+        java.io.File("/proc/self/maps").exists()
+        "errno $e"
+    }.getOrDefault("errno $e")
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) {

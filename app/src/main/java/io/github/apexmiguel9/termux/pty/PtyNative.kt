@@ -34,6 +34,9 @@ internal object PtyNative {
 
     external fun nativePid(handle: Long): Int
 
+    /** errno from the child if exec failed, else 0. */
+    external fun nativeExecErrno(handle: Long): Int
+
     external fun nativeAlive(handle: Long): Boolean
 
     external fun nativeKill(handle: Long)

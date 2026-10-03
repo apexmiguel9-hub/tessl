@@ -30,6 +30,12 @@ typedef struct {
     int master;          /* fd on our side */
     pid_t pid;
     char slave_name[128];
+    /**
+     * Populated with the child's errno if execv/execve failed; 0 on success.
+     * Without this a failed exec looks like a silent shell that never prints
+     * a prompt.
+     */
+    int exec_errno;
 } tessl_pty;
 
 /* Spawn argv[0] on a new pty. argv must be NULL-terminated.

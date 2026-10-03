@@ -14,6 +14,7 @@
 #ifdef __linux__
 #include <sys/prctl.h>
 #endif
+#include <fcntl.h>
 
 #ifndef TIOCSCTTY
 /* asm-generic value for arm64/aarch64. bionic does not always surface this
@@ -45,6 +46,7 @@ int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
                     const char *const envp[],
                     const struct winsize *ws) {
     int master = -1, slave = -1;
+    int exec_status[2] = { 0, 0 };
     pid_t pid;
     char name[PATH_MAX];
 
@@ -68,6 +70,15 @@ int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
     slave = open(name, O_RDWR | O_NOCTTY);
     if (slave == -1) goto fail;
 
+    /* Report exec failures back to the parent. CLOEXEC means the child only
+     * ever writes here if exec actually failed. */
+    if (pipe(exec_status) == -1) {
+        exec_status[0] = exec_status[1] = -1;
+    } else {
+        fcntl(exec_status[0], F_SETFD, FD_CLOEXEC);
+        fcntl(exec_status[1], F_SETFD, FD_CLOEXEC);
+    }
+
     if (ws && set_winsize(slave, ws->ws_row, ws->ws_col) == -1) goto fail;
 
     pid = fork();
@@ -86,11 +97,24 @@ int tessl_pty_spawn(tessl_pty *p, const char *const argv[],
         if (envp) execve(argv[0], (char *const *) argv, (char *const *) envp);
         else execv(argv[0], (char *const *) argv);
         /* Only reached on exec failure. 127 is the conventional "not found". */
+        if (exec_status[1] != -1) {
+            int e = errno;
+            ssize_t ignored = write(exec_status[1], &e, sizeof(e));
+            (void) ignored;
+        }
         _exit(127);
     }
 
     /* ---- parent ---- */
     close(slave);
+    if (exec_status[1] != -1) {
+        close(exec_status[1]);
+        int e = 0;
+        if (read(exec_status[0], &e, sizeof(e)) == (ssize_t) sizeof(e)) {
+            p->exec_errno = e;
+        }
+        close(exec_status[0]);
+    }
     p->master = master;
     p->pid = pid;
     snprintf(p->slave_name, sizeof(p->slave_name), "%s", name);

@@ -172,6 +172,14 @@ Java_io_github_apexmiguel9_termux_pty_PtyNative_nativeWait(JNIEnv *env, jclass c
     return code;
 }
 
+/* errno from the child if exec failed, else 0. */
+JNIEXPORT jint JNICALL
+Java_io_github_apexmiguel9_termux_pty_PtyNative_nativeExecErrno(JNIEnv *env, jclass cls, jlong h) {
+    (void) env; (void) cls;
+    tessl_pty *p = handle_of(h);
+    return p ? p->exec_errno : 0;
+}
+
 JNIEXPORT jint JNICALL
 Java_io_github_apexmiguel9_termux_pty_PtyNative_nativePid(JNIEnv *env, jclass cls, jlong h) {
     (void) env; (void) cls;
