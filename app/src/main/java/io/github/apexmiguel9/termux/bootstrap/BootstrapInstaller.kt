@@ -171,12 +171,12 @@ class BootstrapInstaller(private val ctx: Context) {
         return count to symlinks
     }
 
-    private fun copy(in: InputStream, out: FileOutputStream) {
+    private fun copy(src: InputStream, dst: FileOutputStream) {
         val buf = ByteArray(1 shl 16)
         while (true) {
-            val n = in.read(buf)
+            val n = src.read(buf)
             if (n < 0) break
-            out.write(buf, 0, n)
+            dst.write(buf, 0, n)
         }
     }
 }
