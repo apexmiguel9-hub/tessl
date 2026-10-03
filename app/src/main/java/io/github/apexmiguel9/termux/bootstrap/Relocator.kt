@@ -175,13 +175,16 @@ object Relocator {
         val t = to.toByteArray(Charsets.UTF_8)
         if (t.size > f.size) return src
 
-        var buf = src
+        // MUST copy: this mutates in place, and the caller compares the result
+        // against the original with contentEquals to decide whether to write.
+        // Returning src itself made that comparison trivially true, so nothing
+        // was ever written: 338 ELFs found, 0 patched, no error reported.
+        val buf = src.copyOf()
         var idx = indexOf(buf, from)
         while (idx >= 0) {
             System.arraycopy(t, 0, buf, idx, t.size)
             // NUL-terminate immediately after the replacement.
             buf[idx + t.size] = 0
-            buf = buf
             idx = indexOf(buf, from, idx + t.size)
         }
         return buf

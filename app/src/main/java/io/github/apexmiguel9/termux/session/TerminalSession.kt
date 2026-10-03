@@ -36,9 +36,6 @@ class TerminalSession(
 
     private var pty: PtyProcess? = null
 
-    var emulator: TerminalEmulator = newEmulator(80, 24, 9, 18)
-        private set
-
     /**
      * Monotonic counter bumped on every pty write and every key press.
      *
@@ -114,6 +111,17 @@ class TerminalSession(
 
         override fun getTerminalCursorStyle(): Int? = null
     }
+
+    /**
+     * MUST be declared after [output] and [client].
+     *
+     * Kotlin runs property initialisers in declaration order, and
+     * TerminalEmulator's constructor calls reset(), which immediately does
+     * `mClient.onColorsChanged()`. With emulator initialised first, output and
+     * client were still null and every new session died with an NPE.
+     */
+    var emulator: TerminalEmulator = newEmulator(80, 24, 9, 18)
+        private set
 
     private fun newEmulator(c: Int, r: Int, cw: Int, ch: Int) =
         TerminalEmulator(output, c, r, cw, ch, SCROLLBACK_ROWS, client)
