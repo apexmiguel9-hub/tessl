@@ -13,12 +13,14 @@ import java.io.File
  * TERMUX_APP__PACKAGE_NAME). Changing applicationId without rebuilding the
  * bootstrap yields binaries looking for a prefix that does not exist.
  */
-class AppPaths private constructor(ctx: Context) {
+class AppPaths private constructor(private val appContext: Context) {
 
-    val filesDir = File(ctx.applicationInfo.dataDir, "files")
+    val context: Context get() = appContext
+
+    val filesDir = File(appContext.applicationInfo.dataDir, "files")
     val prefixDir = File(filesDir, "usr")
     val homeDir = File(filesDir, "home")
-    val cacheDir = File(ctx.applicationInfo.dataDir, "cache")
+    val cacheDir = File(appContext.applicationInfo.dataDir, "cache")
     val tmpDir = File(prefixDir, "tmp")
 
     fun distroDir(id: String) = File(filesDir, "distro/$id")
@@ -39,6 +41,15 @@ class AppPaths private constructor(ctx: Context) {
 
         /** Must stay byte-identical to TERMUX_APP__PACKAGE_NAME in termux-packages. */
         const val COMPILED_PREFIX = "/data/data/io.github.apexmiguel9.termux/files/usr"
+
+        /**
+         * The prefix the *stock* Termux bootstrap is compiled for, and the one
+         * [Relocator] rewrites from.
+         */
+        const val STOCK_TERMUX_PREFIX = Relocator.TERMUX_PREFIX
+
+        /** This app's prefix at runtime. Must match applicationId. */
+        val runtimePrefix: String get() = COMPILED_PREFIX
 
         /** termux-packages validates TERMUX__PREFIX at 90 bytes including NUL. */
         const val PREFIX_MAX_LEN = 90

@@ -37,13 +37,38 @@ android {
         }
     }
 
+    signingConfigs {
+        // Committed throwaway key so `adb install` works with no setup and the
+        // same signature on every machine and in CI.
+        create("shared") {
+            storeFile = rootProject.file("keystore/debug.jks")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+        // Real key comes from the environment so no secret is in the repo.
+        create("release") {
+            val f = rootProject.file(
+                System.getenv("TESSL_KEYSTORE") ?: "keystore/release.jks"
+            )
+            if (f.exists()) {
+                storeFile = f
+                storePassword = System.getenv("TESSL_STORE_PASS")
+                keyAlias = System.getenv("TESSL_KEY_ALIAS")
+                keyPassword = System.getenv("TESSL_KEY_PASS")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
         }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

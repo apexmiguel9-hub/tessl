@@ -28,6 +28,7 @@ class MainActivity : ComponentActivity() {
 
     private val sessions = mutableStateListOf<TerminalSession>()
     private var activeId by mutableStateOf<Long?>(null)
+    private var showShell by mutableStateOf(false)
 
     private lateinit var paths: AppPaths
     private val runtimes = mutableMapOf<String, Runtime>()
@@ -49,6 +50,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            if (!paths.isPrefixInstalled) {
+                BootstrapGate(
+                    paths = paths,
+                    archiveUrl = BOOTSTRAP_URL,
+                    onReady = { showShell = true },
+                )
+                return@setContent
+            }
             Shell(
                 sessions = sessions,
                 activeId = activeId,
@@ -92,6 +101,18 @@ class MainActivity : ComponentActivity() {
             sessions.remove(it)
         }
         if (activeId == id) activeId = sessions.lastOrNull()?.id
+    }
+
+    companion object {
+        /**
+         * Stock Termux bootstrap. Relocator rewrites the prefix at install time,
+         * so this works under our own applicationId.
+         * Swap for our own fork's release once termux-packages CI has produced
+         * a zip with COMPILED_PREFIX baked in.
+         */
+        const val BOOTSTRAP_URL =
+            "https://github.com/termux/termux-packages/releases/download/" +
+                "bootstrap-2026.09.27-r1%2Bapt.android-7/bootstrap-aarch64.zip"
     }
 
     override fun onDestroy() {
