@@ -135,10 +135,19 @@ class TerminalSession(
             home = home,
             onOutput = { bytes ->
                 synchronized(lock) { emulator.append(bytes, bytes.size) }
+                android.util.Log.i(
+                    "tessl/session",
+                    "pty +${bytes.size}B " + String(bytes, Charsets.UTF_8)
+                        .replace('\r', '\\r').replace('\n', '\\n').take(100),
+                )
                 revision++
                 onInvalidate()
             },
-            onExit = { code -> exitCode = code; onInvalidate() },
+            onExit = { code ->
+                android.util.Log.i("tessl/session", "exited code=$code")
+                exitCode = code
+                onInvalidate()
+            },
         )
         pty = p
         p.start()
@@ -182,6 +191,11 @@ class TerminalSession(
         synchronized(lock) {
             emulator.processCodePoint(keyCode)
         }
+        android.util.Log.i(
+            "tessl/session",
+            "key=$keyCode meta=$metaState tail=" +
+                emulator.getTranscriptText().takeLast(120).replace('\n', '|'),
+        )
         revision++
         onInvalidate()
         return true

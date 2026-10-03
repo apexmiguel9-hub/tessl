@@ -1,7 +1,6 @@
 package io.github.apexmiguel9.termux.ui
 
 import android.os.Bundle
-import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -121,10 +120,10 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        val active = sessions.firstOrNull { it.id == activeId } ?: return super.onKeyDown(keyCode, event)
-        return active.onKey(keyCode, event.metaState)
-    }
+    // NOTE: deliberately no onKeyDown override. KeyCapture already installs a
+    // view-level OnKeyListener, and the framework also delivers onKeyDown to
+    // the Activity, so every keystroke was being fed to the session twice.
+
 }
 
 @Composable
