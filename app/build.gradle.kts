@@ -120,6 +120,16 @@ android {
         compose = true
     }
 
+    lint {
+        // Lint treats a low targetSdk as fatal (ExpiredTargetSdkVersion and
+        // friends). targetSdk 28 is deliberate and load-bearing here: it is
+        // the only way seapp assigns a domain that may execve() from the app
+        // data dir, which a terminal cannot work without. See the comment on
+        // targetSdk above and app_neverallows.te.
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     packaging {
         jniLibs.useLegacyPackaging = false
     }
