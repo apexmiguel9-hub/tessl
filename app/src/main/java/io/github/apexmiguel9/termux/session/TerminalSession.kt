@@ -138,7 +138,7 @@ class TerminalSession(
                 android.util.Log.i(
                     "tessl/session",
                     "pty +${bytes.size}B " + String(bytes, Charsets.UTF_8)
-                        .replace('\r', '\\r').replace('\n', '\\n').take(100),
+                        .replace("\r", "\\r").replace("\n", "\\n").take(100),
                 )
                 revision++
                 onInvalidate()
@@ -194,7 +194,7 @@ class TerminalSession(
         android.util.Log.i(
             "tessl/session",
             "key=$keyCode meta=$metaState tail=" +
-                emulator.getTranscriptText().takeLast(120).replace('\n', '|'),
+                emulator.screen.transcriptText.takeLast(120).replace("\n", "|"),
         )
         revision++
         onInvalidate()

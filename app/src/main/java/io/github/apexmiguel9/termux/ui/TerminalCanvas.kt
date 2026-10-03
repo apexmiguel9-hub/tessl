@@ -111,7 +111,12 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScreen(
             val start = x
             val sb = StringBuilder()
             while (x < cols && row.getStyle(x) == style) {
-                val ci = x - row.findStartOfColumn(x)
+                // findStartOfColumn returns the index INTO mText for that
+                // column (it walks the text accumulating wcwidth), so for
+                // plain ASCII it equals the column. Subtracting it gave a
+                // constant 0, so every cell in a run rendered mText[0] and a
+                // prompt like "$ " printed once per column.
+                val ci = row.findStartOfColumn(x)
                 sb.append(if (ci in 0 until used) row.mText[ci] else ' ')
                 x++
             }
