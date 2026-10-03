@@ -64,7 +64,12 @@ class BootstrapInstaller(private val ctx: Context) {
 
             paths.ensureDirs()
             Result.Done(report.copy(symlinksMade = made), files)
-        }.getOrElse { Result.Failed(it.message ?: it::class.java.simpleName) }
+        }.getOrElse {
+            // The UI only shows the message; without this a "Stream closed"
+            // with no context is undebuggable.
+            android.util.Log.e("tessl/bootstrap", "install failed", it)
+            Result.Failed("${it::class.java.simpleName}: ${it.message}")
+        }
             .also { tmp.deleteRecursively() }
     }
 
@@ -104,9 +109,15 @@ class BootstrapInstaller(private val ctx: Context) {
             instanceFollowRedirects = true
         }
         try {
+            android.util.Log.i("tessl/bootstrap", "GET $url")
             if (conn.responseCode !in 200..299) {
+                android.util.Log.e("tessl/bootstrap", "HTTP ${conn.responseCode} for $url")
                 error("HTTP ${conn.responseCode} for $url")
             }
+            android.util.Log.i(
+                "tessl/bootstrap",
+                "HTTP ${conn.responseCode} len=${conn.contentLengthLong} final=${conn.url}",
+            )
             val total = conn.contentLengthLong
             BufferedInputStream(conn.inputStream).use { input ->
                 FileOutputStream(dest).use { out ->

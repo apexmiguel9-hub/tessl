@@ -17,10 +17,22 @@ class AppPaths private constructor(private val appContext: Context) {
 
     val context: Context get() = appContext
 
-    val filesDir = File(appContext.applicationInfo.dataDir, "files")
+    /**
+     * Canonical data dir, NOT applicationInfo.dataDir.
+     *
+     * On modern Android dataDir is "/data/user/0/<pkg>" while the canonical
+     * form is "/data/data/<pkg>". They are the same directory via symlink, but
+     * the bootstrap binaries have "/data/data/<pkg>/files/usr" baked into
+     * their ELF strings, and the relocator has to write the exact same string
+     * back. Using dataDir would leave a 4-byte-longer path in every binary and
+     * silently break every string comparison against it.
+     */
+    val dataDir = File("/data/data/${appContext.packageName}")
+
+    val filesDir = File(dataDir, "files")
     val prefixDir = File(filesDir, "usr")
     val homeDir = File(filesDir, "home")
-    val cacheDir = File(appContext.applicationInfo.dataDir, "cache")
+    val cacheDir = File(dataDir, "cache")
     val tmpDir = File(prefixDir, "tmp")
 
     fun distroDir(id: String) = File(filesDir, "distro/$id")
