@@ -2,6 +2,8 @@ package io.github.apexmiguel9.termux.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,12 +90,20 @@ fun TerminalShell(
                             .padding(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 8.dp)
                             .clip(RoundedCornerShape(10.dp)),
                     )
-                    // Transparent, full-size: it exists only to hold focus and
-                    // swallow key events for the active session.
-                    KeyCapture(
-                        onKey = { code, meta -> onKey(active, code, meta) },
+                    // The IME commits text, not key codes, so the terminal
+                    // needs a real (zero-opacity) text field to receive it.
+                    // Tapping the surface raises the keyboard again after the
+                    // user has dismissed it.
+                    val raise = rememberKeyboardRaiser()
+                    TerminalInput(
                         onText = { t -> active.writeText(t) },
+                        onKey = { code, meta -> onKey(active, code, meta) },
                         modifier = Modifier.fillMaxSize(),
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) { detectTapGestures { raise() } }
                     )
                 }
             }

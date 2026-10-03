@@ -57,13 +57,14 @@ class MainActivity : ComponentActivity() {
                 )
                 return@setContent
             }
-            Shell(
+            AppRoot(
                 sessions = sessions,
                 activeId = activeId,
                 onSelect = { activeId = it },
                 onClose = ::closeSession,
                 onNew = { newSession(defaultRuntime()) },
                 onKey = { s, code, meta -> s.onKey(code, meta) },
+                ready = paths.isPrefixInstalled,
             )
         }
     }
