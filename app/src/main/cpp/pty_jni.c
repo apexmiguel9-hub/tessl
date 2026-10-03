@@ -17,8 +17,6 @@
 
 #include "pty_core.h"
 
-#define JNI_VERSION_1_6 JNI_VERSION_1_6
-
 static tessl_pty *handle_of(jlong h) {
     return (tessl_pty *) (intptr_t) h;
 }
