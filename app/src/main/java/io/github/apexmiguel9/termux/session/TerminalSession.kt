@@ -160,44 +160,43 @@ class TerminalSession(
     fun writeText(text: String) = writeBytes(text.toByteArray(Charsets.UTF_8))
 
     /**
-     * Feed a key. Returns true if the emulator consumed it.
-     * [metaState] is android.view.KeyEvent.getMetaState().
+     * Feed a hardware/soft key. Returns true if it was consumed.
+     *
+     * FORK NOTE: the obvious `emulator.processCodePoint(keyCode)` is wrong --
+     * processCodePoint takes a Unicode code point, not an Android key code, so
+     * KEYCODE_M (41) rendered as ')' (0x29). Termux instead runs the key code
+     * through [com.termux.terminal.KeyHandler], which returns the *string* to
+     * put on the wire (plain letters, ctrl/alt transformed, arrows as CSI
+     * sequences) and lets the pty and readline do the echoing.
+     *
+     * @param metaState android.view.KeyEvent.getMetaState()
      */
     fun onKey(keyCode: Int, metaState: Int): Boolean {
-        val alt = metaState and android.view.KeyEvent.META_ALT_ON != 0
-        val ctrl = metaState and android.view.KeyEvent.META_CTRL_ON != 0
-        val shift = metaState and android.view.KeyEvent.META_SHIFT_ON != 0
-
-        // Ctrl+letter becomes its control code. The emulator wants the
-        // keycode for everything else.
-        if (ctrl && !alt && keyCode in android.view.KeyEvent.KEYCODE_A..android.view.KeyEvent.KEYCODE_Z) {
-            val ch = ('a'.code + (keyCode - android.view.KeyEvent.KEYCODE_A))
-            writeBytes(byteArrayOf(ch.toByte()))
-            return true
+        var keyMode = 0
+        if (metaState and android.view.KeyEvent.META_SHIFT_ON != 0) {
+            keyMode = keyMode or com.termux.terminal.KeyHandler.KEYMOD_SHIFT
         }
-        if (alt && !ctrl && keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
-            writeBytes("\u001b\r".toByteArray(Charsets.UTF_8))
-            return true
+        if (metaState and android.view.KeyEvent.META_ALT_ON != 0) {
+            keyMode = keyMode or com.termux.terminal.KeyHandler.KEYMOD_ALT
         }
-        if (alt && keyCode == android.view.KeyEvent.KEYCODE_BACK) {
-            writeBytes(byteArrayOf(0x7f)) // DEL
-            return true
-        }
-        if (shift && keyCode == android.view.KeyEvent.KEYCODE_TAB) {
-            writeBytes(byteArrayOf(0x1b, '['.code.toByte(), 'Z'.code.toByte())) // ESC [ Z
-            return true
+        if (metaState and android.view.KeyEvent.META_CTRL_ON != 0) {
+            keyMode = keyMode or com.termux.terminal.KeyHandler.KEYMOD_CTRL
         }
 
+        val code: String?
         synchronized(lock) {
-            emulator.processCodePoint(keyCode)
+            emulator.setCursorBlinkState(true)
+            code = com.termux.terminal.KeyHandler.getCode(
+                keyCode,
+                keyMode,
+                emulator.isCursorKeysApplicationMode,
+                emulator.isKeypadApplicationMode,
+            )
         }
-        android.util.Log.i(
-            "tessl/session",
-            "key=$keyCode meta=$metaState tail=" +
-                emulator.screen.transcriptText.takeLast(120).replace("\n", "|"),
-        )
-        revision++
-        onInvalidate()
+        if (code == null) return false
+
+        android.util.Log.i("tessl/session", "key=$keyCode meta=$keyMode -> ${code.length} bytes")
+        writeText(code)
         return true
     }
 

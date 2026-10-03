@@ -79,7 +79,7 @@ fun KeyCapture(
                 if (e.type == KeyEventType.KeyDown) {
                     when (e.key) {
                         Key.Enter -> { onText("\r"); true }
-                        Key.Backspace -> { onText("\b"); true }
+                        Key.Backspace -> { onText("\u007f"); true }
                         Key.Escape -> { onKey(KeyEvent.KEYCODE_ESCAPE, 0); true }
                         Key.Tab -> { onKey(KeyEvent.KEYCODE_TAB, 0); true }
                         Key.DirectionUp -> { onKey(KeyEvent.KEYCODE_DPAD_UP, 0); true }
