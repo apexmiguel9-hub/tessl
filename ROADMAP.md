@@ -118,7 +118,7 @@ proot). Real software lives in glibc.
       `MALLOC_ARENA_MAX=1`, `MALLOC_TRIM_THRESHOLD_`, cgroup v2 `memory.max` per
       session, lazy bind mounts
 - `[ ]` measure it, don't guess: report peak RSS per session in Settings
-- `[ ]] per-session runtime choice in the UI: this is what the `Runtime` seam is for
+- [ ] per-session runtime choice in the UI: this is what the `Runtime` seam is for
 
 ---
 
