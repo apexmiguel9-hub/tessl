@@ -6,12 +6,45 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- termux-gui server side, running in-process with the terminal.
+         FOREGROUND_SERVICE keeps the connection alive while its Activities are
+         backgrounded; the guest program owns the sockets. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-feature android:glEsVersion="0x00020000" android:required="false" />
+
 
     <application
         android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Tessl">
+
+        <!-- Launched by the guest program via
+             `am broadcast -n io.github.apexmiguel9.termux/.gui.GUIReceiver
+              --es mainSocket X --es eventSocket Y`, exactly as the upstream
+             C library does against com.termux.gui/.GUIReceiver. -->
+        <receiver
+            android:name=".gui.GUIReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.termux.gui/.GUIReceiver" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".gui.GUIService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+
+        <activity
+            android:name=".gui.GUIActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density|fontScale|smallestScreenSize"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <activity
             android:name=".ui.MainActivity"

@@ -145,4 +145,8 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    // NOTE: the termux-gui server port lives in app/src/main/java-gui-port/ and
+    // is deliberately outside the source set until phase 4 of ROADMAP.md. It
+    // needs the plugin's resources and databinding layouts ported first.
 }
