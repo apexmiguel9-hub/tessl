@@ -62,6 +62,7 @@ class BootstrapInstaller(private val ctx: Context) {
                 targetPrefix = paths.prefixDir.absolutePath,
             )
 
+            exportTlsEnv(paths.prefixDir, paths.prefixDir.absolutePath)
             paths.ensureDirs()
             Result.Done(report.copy(symlinksMade = made), files)
         }.getOrElse {
@@ -71,6 +72,46 @@ class BootstrapInstaller(private val ctx: Context) {
             Result.Failed("${it::class.java.simpleName}: ${it.message}")
         }
             .also { tmp.deleteRecursively() }
+    }
+
+    /**
+     * The one consequence of a package name longer than Termux's.
+     *
+     * openssl carries /data/data/com.termux/files/usr/etc/tls/cert.pem in
+     * .rodata. The relocator can only replace such a string with one that is no
+     * longer (48 bytes available), and ours would be 66, so the CA bundle path
+     * stays wrong and every TLS handshake fails:
+     *
+     *   error adding trust anchors from file:
+     *     /data/data/com.termux/files/usr/etc/tls/cert.pem
+     *
+     * Every consumer below honours an env var over the compiled-in default, so
+     * exporting them from the login profile is enough. The permanent fix is a
+     * package name of 10 characters or fewer, which makes the string fit.
+     */
+    private fun exportTlsEnv(prefixDir: File, prefix: String) {
+        val d = "$"  // Kotlin raw strings do not interpolate, be explicit anyway
+        val block = """
+            |# tessl: the compiled-in CA bundle path lives under /data/data/com.termux
+            |# and cannot be rewritten in place when the package name is longer.
+            |_t=""
+            |for _v in cert.pem ca-certificates.crt; do
+            |  if [ -f "${d}PREFIX/etc/tls/${d}_v" ]; then _t="${d}PREFIX/etc/tls/${d}_v"; break; fi
+            |done
+            |[ -n "${d}_t" ] || _t="${d}PREFIX/etc/tls/cert.pem"
+            |export SSL_CERT_FILE="${d}_t" CURL_CA_BUNDLE="${d}_t" REQUESTS_CA_BUNDLE="${d}_t"
+            |export GIT_SSL_CAINFO="${d}_t" NODE_EXTRA_CA_CERTS="${d}_t"
+            |unset _v _t
+        |""".trimMargin()
+
+        for (name in listOf("profile", "bash.bashrc")) {
+            val f = File(prefixDir, "etc/$name")
+            if (!f.exists()) continue
+            val cur = f.readText()
+            if (cur.contains("tessl: the compiled-in CA bundle path")) continue
+            runCatching { f.appendText("\n$block\n") }
+        }
+        android.util.Log.i("tessl/bootstrap", "TLS env exported to login profile")
     }
 
     private fun makeSymlinks(prefixDir: File, symlinks: List<Pair<String, String>>): Int {
